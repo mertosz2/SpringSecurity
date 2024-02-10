@@ -3,6 +3,7 @@ package com.example.springsecurity.config;
 import com.example.springsecurity.service.AuthenticationUserDetailService;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -33,17 +34,20 @@ public class SecurityConfig {
 
     private final AuthenticationUserDetailService authenticationUserDetailService;
 
+    private final JwtAuthFilter jwtAuthFilter;
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((requests) -> requests.requestMatchers("/public/**").permitAll()
+                        .requestMatchers(HttpMethod.POST ,"/auth/authenticate").permitAll()
                         .requestMatchers( "/member/**").hasAnyRole("MEMBER", "ADMIN")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN")
                         .anyRequest().authenticated()
 
                 )
-                .addFilterBefore(new ApiKeyAuthFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthFilter, BasicAuthenticationFilter.class)
                 .httpBasic(withDefaults())
                 .build();
     }
