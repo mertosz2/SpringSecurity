@@ -1,6 +1,12 @@
 package com.example.springsecurity.config;
 
+import com.example.springsecurity.service.AuthenticationUserDetailService;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,19 +21,24 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Component
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@AllArgsConstructor
 public class SecurityConfig {
+
+    private final AuthenticationUserDetailService authenticationUserDetailService;
 
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((requests) -> requests.requestMatchers("/public/**").permitAll()
-          //              .requestMatchers( "/member/**").hasAnyRole("MEMBER", "ADMIN")
+                        .requestMatchers( "/member/**").hasAnyRole("MEMBER", "ADMIN")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN")
                         .anyRequest().authenticated()
 
@@ -37,27 +48,23 @@ public class SecurityConfig {
                 .build();
     }
 
-    @Bean
+    //@Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
+
     @Bean
-    public UserDetailsService userDetailsService(){
-
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-        UserDetails user = User.withUsername("member")
-                .password(encoder.encode("password"))
-                .roles("MEMBER")
-                .authorities("MEMBER_READ")
-                .build();
-
-        UserDetails admin = User.withUsername("admin")
-                .password(encoder.encode("password"))
-                .roles("ADMIN")
-                .build();
-
-        return new InMemoryUserDetailsManager(user);
-
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration )throws Exception{
+        return authenticationConfiguration.getAuthenticationManager();
     }
+    @Bean
+    public AuthenticationProvider authenticationProvider(){
+            final DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+            authenticationProvider.setUserDetailsService(authenticationUserDetailService);
+            authenticationProvider.setPasswordEncoder(passwordEncoder());
+            return  authenticationProvider;
+    }
+
+
+
 }
